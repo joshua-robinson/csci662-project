@@ -1,2 +1,2 @@
-# csci-662-project
+# csci662-project
 Group project for CSCI 662
