@@ -907,13 +907,12 @@ def main():
 
     if args.output_dir is not None:
         accelerator.wait_for_everyone()
-        if any(r in args.output_dir for r in ['0.50', '0.60', '0.70', '0.80', '0.85', '0.90']):
-            unwrapped_model = accelerator.unwrap_model(model)
-            unwrapped_model.to('cpu')
-            unwrapped_model.save_pretrained(
-                args.output_dir, is_main_process=accelerator.is_main_process, save_function=accelerator.save
-            )
-            unwrapped_model.base_model.save_pretrained(args.output_dir)
+        unwrapped_model = accelerator.unwrap_model(model)
+        unwrapped_model.to('cpu')
+        unwrapped_model.save_pretrained(
+            args.output_dir, is_main_process=accelerator.is_main_process, save_function=accelerator.save
+        )
+        unwrapped_model.base_model.save_pretrained(args.output_dir)
         if accelerator.is_main_process:
             tokenizer.save_pretrained(args.output_dir)
             if args.push_to_hub:
