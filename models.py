@@ -10,6 +10,7 @@ from transformers.models.gpt_neox.modeling_gpt_neox import (
     GPTNeoXPreTrainedModel
 )
 from typing import Optional, Tuple, Union
+from utils import ckpt_associated_with_gptneox
 
 import logging
 import torch
@@ -356,9 +357,7 @@ class CustomGPTNeoXForCausalLM(GPTNeoXPreTrainedModel):
 
 
 def get_custom_model_cls(name: str) -> PreTrainedModel:
-    if name in "togethercomputer/RedPajama-INCITE-Base-3B-v1":
-        return CustomGPTNeoXForCausalLM
-    elif name.startswith("EleutherAI/pythia"):
+    if ckpt_associated_with_gptneox(ckpt=name):
         return CustomGPTNeoXForCausalLM
     else:
         raise NotImplementedError(
