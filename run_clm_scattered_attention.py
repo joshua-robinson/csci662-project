@@ -467,7 +467,7 @@ def main():
                 bias="none",
                 task_type="CAUSAL_LM",
             )
-        elif any(n in args.model_name_or_path for n in ['Red', 'bloom']):
+        elif any(n in args.model_name_or_path for n in ['Red', 'bloom', 'pythia']):
             config = LoraConfig(
                 r=lora_r,
                 lora_alpha=lora_alpha,

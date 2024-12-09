@@ -356,7 +356,9 @@ class CustomGPTNeoXForCausalLM(GPTNeoXPreTrainedModel):
 
 
 def get_custom_model_cls(name: str) -> PreTrainedModel:
-    if name == "togethercomputer/RedPajama-INCITE-Base-3B-v1":
+    if name in "togethercomputer/RedPajama-INCITE-Base-3B-v1":
+        return CustomGPTNeoXForCausalLM
+    elif name.startswith("EleutherAI/pythia"):
         return CustomGPTNeoXForCausalLM
     else:
         raise NotImplementedError(

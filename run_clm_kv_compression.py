@@ -466,7 +466,7 @@ def main():
                 bias="none",
                 task_type="CAUSAL_LM",
             )
-        elif any(n in args.model_name_or_path for n in ['Red', 'bloom']):
+        elif any(n in args.model_name_or_path for n in ['Red', 'bloom', 'pythia']):
             config = LoraConfig(
                 r=lora_r,
                 lora_alpha=lora_alpha,
@@ -494,7 +494,7 @@ def main():
         #             output.requires_grad_(True)
         #         model.get_input_embeddings().register_forward_hook(make_inputs_require_grad)
         model = get_peft_model(model, config)
-        if any(n in args.model_name_or_path for n in ['Red', 'codegen', 'gptj']):
+        if any(n in args.model_name_or_path for n in ['Red', 'codegen', 'gptj', 'pythia']):
             logger.info("updating embeddings for relative position models")
             print(model.get_input_embeddings().weight.requires_grad)
             model.print_trainable_parameters()
@@ -820,7 +820,7 @@ def main():
                     total_loss += loss.detach().float()
                 accelerator.backward(loss)
                 # clear gradients for tokens that were originally presented in the vocab
-                if any(n in args.model_name_or_path for n in ['Red']):
+                if any(n in args.model_name_or_path for n in ['Red', 'pythia']):
                     unwrapped_model = accelerator.unwrap_model(model).base_model
                     unwrapped_model.get_input_embeddings().weight.grad[:cl_token_id, :] = 0
                     unwrapped_model.get_input_embeddings().weight.grad[cr_token_id+1:, :] = 0
