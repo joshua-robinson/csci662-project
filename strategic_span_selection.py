@@ -1,7 +1,98 @@
 from accelerate.logging import MultiProcessAdapter
 from datasets import DatasetDict
 from transformers import PreTrainedTokenizer
+from collections import deque
 
+# from selective context code
+import selective_context
+from selective_context import SelectiveContext
+
+def find_word_level_indexes(words, phrases):
+    """
+    Finds the word-level indexes of the phrases in the text.
+    returns a dict with key for every unique phrase in text.
+    if there are multiplt matches for one phrase, we return both matches.
+    """
+    idx = 0
+    phrase_locs = []
+
+    for phrase in phrases:  # Use a set to handle duplicate phrases
+        # Tokenize the phrase into words
+        phrase_words = phrase.split()
+        phrase_len = len(phrase_words)
+
+        # Find the starting word index of the phrase
+        for i in range(idx,len(words) - phrase_len + 1):
+            if words[i:i + phrase_len] == phrase_words:
+                phrase_locs.append((i, i + phrase_len - 1))
+                idx = i + phrase_len
+                break
+
+    return phrase_locs
+
+def remove_back_to_back_cr_cl(tokens, cr_token, cl_token):
+    """
+    Removes `cr_token` followed immediately by `cl_token` from the token list.
+    
+    Args:
+        tokens (list): The list of tokens.
+        cr_token (str): The token indicating the end of a masked phrase.
+        cl_token (str): The token indicating the start of a masked phrase.
+    
+    Returns:
+        list: A new list of tokens with consecutive `cr_token` and `cl_token` removed.
+    """
+    result = []
+    skip_next = False
+
+    for i in range(len(tokens) - 1):
+        if skip_next:
+            skip_next = False
+            continue
+        if tokens[i] == cr_token and tokens[i + 1] == cl_token:
+            skip_next = True  # Skip the next token
+        else:
+            result.append(tokens[i])
+    
+    # Add the last token if it wasn't skipped
+    if not skip_next:
+        result.append(tokens[-1])
+    
+    return result
+
+# after calling sc for masked_phrases
+def insert_sentinel_tokens(input_text, masked_phrases, cl_token, cr_token):
+    # Normalize masked phrases: strip extra spaces and remove '�', if any
+    masked_phrases = [phrase.replace('�', '').strip() for phrase in masked_phrases if phrase.strip()]
+    masked_phrases = [phrase for phrase in masked_phrases if phrase] # remove empty strings
+
+    # get the words
+    words = input_text.split()
+
+    # find indices where unique masked phrases occur, list of tuples
+    masked_phrase_indexes = find_word_level_indexes(words, masked_phrases)
+
+    # for every tuple in masked_phrase_indexes, insert cl_token and cr_token
+    phrase_idx_q = deque(masked_phrase_indexes)
+    final_tokens = []
+    curr_mask_start, curr_mask_end = phrase_idx_q.popleft()
+
+    for idx, word in enumerate(words):
+
+      if idx == curr_mask_start:
+        final_tokens.append(cl_token)
+
+      final_tokens.append(word)
+
+      if idx == curr_mask_end:
+        final_tokens.append(cr_token)
+        if phrase_idx_q:
+          curr_mask_start, curr_mask_end = phrase_idx_q.popleft()
+    
+    # combine spans that meet at ends, i.e. remove cr_token, cl_token if they are next to each other
+    combined_tokens = remove_back_to_back_cr_cl(final_tokens, cr_token, cl_token)
+
+    return ' '.join(combined_tokens)
 
 def strategic_tokenize_function(
     examples: DatasetDict,
@@ -14,52 +105,24 @@ def strategic_tokenize_function(
     cr_token: str,
     logger: MultiProcessAdapter
 ) -> DatasetDict:
-    # if not compress:
-    #     return tokenizer(examples[text_column_name])
-    # MAX_BOUNDED_LEN = max_span_length
-    # avg_length = (2+MAX_BOUNDED_LEN) / 2
-    # MAX_BOUNDED_RATIO = bound_ratio # ratio before taking added <CR> into account
-    # logger.info(f"compression ratio before: {MAX_BOUNDED_RATIO}")
-    # MAX_BOUNDED_RATIO = MAX_BOUNDED_RATIO * (avg_length / (avg_length-1)) # ratio after taking added <CR> into account
-    # logger.info(f"compression ratio after: {MAX_BOUNDED_RATIO}")
-    # nums = len(examples[text_column_name])
-    # for m in range(nums):
-    #     cur_text = examples[text_column_name][m]
-    #     splitted_text = cur_text.split(" ")
-    #     cur_length = len(splitted_text)
-    #     if cur_length < 30:
-    #         continue
-    #     max_bounded_tokens = int(MAX_BOUNDED_RATIO*cur_length)
-    #     bounded_tokens = 0
-    #     bounded_tokens_indices = set()
-    #     boundary = []
-    #     avg_times = max_bounded_tokens // (avg_length)
-    #     times = 0
-    #     while bounded_tokens<max_bounded_tokens:
-    #         l = random.randint(0, cur_length-MAX_BOUNDED_LEN-1)
-    #         r = l + random.randint(1, MAX_BOUNDED_LEN-1)
-    #         f = True
-    #         for i in range(l, r+1):
-    #             if i in bounded_tokens_indices:
-    #                 f = False
-    #                 break
-    #         if f:
-    #             for i in range(l, r+1):
-    #                 bounded_tokens_indices.add(i)
-    #                 boundary.append((l, r))
-    #                 bounded_tokens += r-l+1
-    #         times += 1
-    #         if times >= 3 * avg_times:
-    #             break
-    #     boundary = list(sorted(boundary))
-    #     final_tokens = []
-    #     prev_index = -1
-    #     for i, j in boundary:
-    #         final_tokens.extend(splitted_text[prev_index+1:i])
-    #         final_tokens.extend([cl_token]+splitted_text[i:j+1]+[cr_token])
-    #         prev_index = j
-    #     final_tokens.extend(splitted_text[prev_index+1:])
-    #     final_text = " ".join(final_tokens)
-    #     examples[text_column_name][m] = final_text
-    # return tokenizer(examples[text_column_name])
-    pass
+    if not compress:
+        return tokenizer(examples[text_column_name])
+
+    # initialize model to get self information
+    sc = SelectiveContext(model_type='gpt2',lang='en')
+
+    for idx,example_text in enumerate(examples[text_column_name]):
+      # ignore example if its < 30 words (following original paper)
+      words = example_text.split()
+      if len(words)<30: continue
+      
+      # use selective context class from (https://github.com/liyucheng09/Selective_Context/tree/main)
+      _,masked_phrases = sc(example_text,reduce_ratio = bound_ratio, reduce_level = 'phrase')
+
+      # insert sentinel tokens in to cover masked phrases in spans
+      tokenized_text = insert_sentinel_tokens(example_text, masked_phrases, cl_token, cr_token)
+
+      # assign new tokenized text to examples
+      examples[text_column_name][idx] = tokenized_text
+
+    return tokenizer(examples[text_column_name])
