@@ -8,11 +8,6 @@ import selective_context
 from selective_context import SelectiveContext
 
 def find_word_level_indexes(words, phrases):
-    """
-    Finds the word-level indexes of the phrases in the text.
-    returns a dict with key for every unique phrase in text.
-    if there are multiplt matches for one phrase, we return both matches.
-    """
     idx = 0
     phrase_locs = []
 
@@ -75,6 +70,11 @@ def insert_sentinel_tokens(input_text, masked_phrases, cl_token, cr_token):
     # for every tuple in masked_phrase_indexes, insert cl_token and cr_token
     phrase_idx_q = deque(masked_phrase_indexes)
     final_tokens = []
+    
+    # ensure that there are phrases to mask
+    if not phrase_idx_q:
+        return input_text
+    
     curr_mask_start, curr_mask_end = phrase_idx_q.popleft()
 
     for idx, word in enumerate(words):
