@@ -24,6 +24,7 @@ https://huggingface.co/models?filter=text-generation
 CL_TOKEN = '<CL>'
 CR_TOKEN = '<CR>'
 
+from functools import partial
 from models import get_custom_model_cls
 
 import argparse
@@ -257,6 +258,21 @@ def parse_args():
         "--peft",
         type=str,
         default='lora',
+    )
+    parser.add_argument(
+        "--pos_ids_by_doc",
+        default=False,
+        action="store_true"
+    )
+    parser.add_argument(
+        "--mask_across_docs",
+        default=False,
+        action="store_true"
+    )
+    parser.add_argument(
+        "--strategic_selection",
+        default=False,
+        action="store_true"
     )
     args = parser.parse_args()
 
@@ -555,6 +571,20 @@ def main():
             final_text = " ".join(final_tokens)
             examples[text_column_name][m] = final_text
         return tokenizer(examples[text_column_name])
+    
+    if args.strategic_selection:
+        from strategic_span_selection import strategic_tokenize_function
+        tokenize_function = partial(
+            strategic_tokenize_function,
+            compress=args.compress,
+            tokenizer=tokenizer,
+            text_column_name=text_column_name,
+            max_span_length=args.max_span_length,
+            bound_ratio=args.bound_ratio,
+            cl_token=CL_TOKEN,
+            cr_token=CR_TOKEN,
+            logger=logger,
+        )
 
     with accelerator.main_process_first():
         tokenized_datasets = raw_datasets.map(
@@ -652,20 +682,69 @@ def main():
                         for l, r in boundary_batch[i]:
                             if l-1<=k<=r and (r+1)==j:
                                 new_attn_mask[i][j][k] = 1
+        
+        if args.mask_across_docs:
+            # Get the lengths of the input_ids for all sequences being packed
+            input_id_lengths = [len(ids) for ids in examples["input_ids"]]
+
+            # Pack document ids
+            doc_ids = list(chain(*[[i]*input_id_lengths[i] for i in range(len(input_id_lengths))]))
+            assert len(doc_ids) == len(concatenated_examples[list(examples.keys())[0]])
+            doc_ids = [doc_ids[i:i+block_size] for i in range(0, total_length, block_size)]
+
+            # Tokens should be blocked from attending to tokens in different
+            # documents
+            for i in range(len(result['input_ids'])):
+                for j in range(len(result['input_ids'][i])):
+                    for k in range(j+1):
+                        if doc_ids[i][j] != doc_ids[i][k]:
+                            new_attn_mask[i][j][k] = 0
+
         result['attention_mask'] = new_attn_mask
-        # modify position ids
-        final_position_ids = []
-        for i in range(len(result['input_ids'])):
-            position_ids = list(range(len(result['input_ids'][i])))
-            final_position_ids.append(position_ids)
+
+        if args.pos_ids_by_doc:
+            # Get the lengths of the input_ids for all sequences being packed
+            input_id_lengths = [len(ids) for ids in examples["input_ids"]]
+
+            # Pack document ids
+            doc_ids = list(chain(*[[i]*input_id_lengths[i] for i in range(len(input_id_lengths))]))
+            assert len(doc_ids) == len(concatenated_examples[list(examples.keys())[0]])
+            doc_ids = [doc_ids[i:i+block_size] for i in range(0, total_length, block_size)]
+
+            pos_ids = []
             cur_id = 0
-            for j in range(len(result['input_ids'][i])):
-                if result['input_ids'][i][j] in [cl_token_id, cr_token_id]:
-                    final_position_ids[i][j] = 0 if j==0 else final_position_ids[i][j-1]
-                else:
-                    final_position_ids[i][j] = cur_id
-                    cur_id += 1
-        result['position_ids'] = final_position_ids
+            cur_doc_idx = 0
+            for i in range(len(result['input_ids'])):
+                pos_ids_for_seq_i = []
+                for j in range(len(result['input_ids'][i])):
+                    if doc_ids[i][j] != cur_doc_idx:
+                        cur_id = 0
+                        cur_doc_idx = doc_ids[i][j]
+                    if result['input_ids'][i][j] in [cl_token_id, cr_token_id]:
+                        pos_ids_for_seq_i.append(max(cur_id-1, 0))
+                    else:
+                        # assert cur_id < 2048, f"BAD CUR ID {cur_id}"
+                        pos_ids_for_seq_i.append(cur_id)
+                        cur_id += 1
+                # assert len(pos_ids_for_seq_i) == 256, f"BAD LEN {len(pos_ids_for_seq_i)}"
+                pos_ids.append(pos_ids_for_seq_i)
+            
+            result['position_ids'] = pos_ids
+        else:
+            # modify position ids
+            final_position_ids = []
+            for i in range(len(result['input_ids'])):
+                position_ids = list(range(len(result['input_ids'][i])))
+                final_position_ids.append(position_ids)
+                cur_id = 0
+                for j in range(len(result['input_ids'][i])):
+                    if result['input_ids'][i][j] in [cl_token_id, cr_token_id]:
+                        final_position_ids[i][j] = 0 if j==0 else final_position_ids[i][j-1]
+                    else:
+                        final_position_ids[i][j] = cur_id
+                        cur_id += 1
+            result['position_ids'] = final_position_ids
+
         return result
 
     # Note that with `batched=True`, this map processes 1,000 texts together, so group_texts throws away a remainder

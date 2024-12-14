@@ -262,6 +262,16 @@ def parse_args():
         type=str,
         default='lora',
     )
+    parser.add_argument(
+        "--pos_ids_by_doc",
+        default=False,
+        action="store_true"
+    )
+    parser.add_argument(
+        "--mask_across_docs",
+        default=False,
+        action="store_true"
+    )
     args = parser.parse_args()
 
     # Sanity checks
@@ -559,8 +569,39 @@ def main():
             for j in range(len(result['input_ids'][i])):
                 for k in range(j+1):
                     if k==j or sampled_attn[k]==1: new_attn_mask[i][j][k] = 1
+
+        if args.mask_across_docs:
+            # Get the lengths of the input_ids for all sequences being packed
+            input_id_lengths = [len(ids) for ids in examples["input_ids"]]
+
+            # Pack document ids
+            doc_ids = list(chain(*[[i]*input_id_lengths[i] for i in range(len(input_id_lengths))]))
+            assert len(doc_ids) == len(concatenated_examples[list(examples.keys())[0]])
+            doc_ids = [doc_ids[i:i+block_size] for i in range(0, total_length, block_size)]
+
+            # Tokens should be blocked from attending to tokens in different
+            # documents
+            for i in range(len(result['input_ids'])):
+                for j in range(len(result['input_ids'][i])):
+                    for k in range(j+1):
+                        if doc_ids[i][j] != doc_ids[i][k]:
+                            new_attn_mask[i][j][k] = 0
+
         result['attention_mask'] = new_attn_mask
-        result['position_ids'] = [list(range(len(result['input_ids'][i]))) for i in range(len(result['input_ids']))]
+
+        if args.pos_ids_by_doc:
+            # Get the lengths of the input_ids for all sequences being packed
+            input_id_lengths = [len(ids) for ids in examples["input_ids"]]
+
+            # Get position ids for each sequence separately
+            pos_ids = list(chain(*[list(range(n)) for n in input_id_lengths]))
+            assert len(pos_ids) == len(concatenated_examples[list(examples.keys())[0]])
+
+            # Pack the position ids
+            result['position_ids'] = [pos_ids[i:i+block_size] for i in range(0, total_length, block_size)]
+        else:
+            result['position_ids'] = [list(range(len(result['input_ids'][i]))) for i in range(len(result['input_ids']))]
+
         return result
 
     # Note that with `batched=True`, this map processes 1,000 texts together, so group_texts throws away a remainder
