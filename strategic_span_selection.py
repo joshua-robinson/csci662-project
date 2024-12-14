@@ -113,29 +113,33 @@ def strategic_tokenize_function(
     logger: MultiProcessAdapter,
     sc: SelectiveContext,
 ) -> dict:
+    """
+    Tokenizes input text with optional strategic span compression, returning a new dictionary
+    compatible with the Hugging Face `Dataset.map` method.
+    """
+    # If no compression is applied, directly tokenize the text column
     if not compress:
-        # Tokenize and return the column as is
-        return {text_column_name: tokenizer(examples[text_column_name])}
+        return tokenizer(examples[text_column_name])
 
-    # Prepare the modified column
-    modified_texts = []
+    nums = len(examples[text_column_name])
 
-    for cur_text in examples[text_column_name]:
-        # Ignore examples < 30 words
+    for m in range(nums):
+        cur_text = examples[text_column_name][m]
         words = cur_text.split()
-        if len(words) < 30:
-            tokenized_text = cur_text  # Keep the original text if too short
-        else:
-            # Use selective context class to determine masked phrases
-            _, masked_phrases = sc(
-                cur_text, reduce_ratio=bound_ratio, reduce_level="phrase"
-            )
-            # Insert sentinel tokens
-            tokenized_text = insert_sentinel_tokens(
-                cur_text, masked_phrases, cl_token, cr_token
-            )
-        # Append the modified text to the list
-        modified_texts.append(tokenized_text)
+        cur_length = len(words)
 
-    # Return only the modified column as a dictionary
-    return {text_column_name: modified_texts}
+        # Ignore examples with fewer than 30 words
+        if cur_length < 30:
+            continue
+
+        # Use selective context to identify masked phrases
+        _, masked_phrases = sc(cur_text, reduce_ratio=bound_ratio, reduce_level='phrase')
+
+        # Insert sentinel tokens for the masked phrases
+        tokenized_text = insert_sentinel_tokens(cur_text, masked_phrases, cl_token, cr_token)
+
+        # Replace the current text with the modified version
+        examples[text_column_name][m] = tokenized_text
+
+    # Tokenize the modified examples
+    return tokenizer(examples[text_column_name])
