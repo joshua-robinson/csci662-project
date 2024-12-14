@@ -64,6 +64,7 @@ from transformers.utils.versions import require_version
 from copy import deepcopy
 from tensorboardX import SummaryWriter
 
+
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
 check_min_version("4.27.0")
 
@@ -574,6 +575,8 @@ def main():
     
     if args.strategic_selection:
         from strategic_span_selection import strategic_tokenize_function
+        from selective_context import SelectiveContext
+        sc = SelectiveContext(model_type="gpt2", lang="en")
         tokenize_function = partial(
             strategic_tokenize_function,
             compress=args.compress,
@@ -584,13 +587,14 @@ def main():
             cl_token=CL_TOKEN,
             cr_token=CR_TOKEN,
             logger=logger,
+            sc=sc,
         )
 
     with accelerator.main_process_first():
         tokenized_datasets = raw_datasets.map(
             tokenize_function,
             batched=True,
-            num_proc=args.preprocessing_num_workers,
+            num_proc=1,#args.preprocessing_num_workers,
             remove_columns=column_names,
             load_from_cache_file=not args.overwrite_cache,
             desc="Running tokenizer on dataset",
