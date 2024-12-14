@@ -2,7 +2,7 @@ from accelerate.logging import MultiProcessAdapter
 from datasets import DatasetDict
 from transformers import PreTrainedTokenizer
 from collections import deque
-
+from datasets import Dataset
 # from selective context code
 import selective_context
 from selective_context import SelectiveContext
@@ -101,9 +101,8 @@ def insert_sentinel_tokens(input_text, masked_phrases, cl_token, cr_token):
 
     return " ".join(combined_tokens)
 
-
 def strategic_tokenize_function(
-    examples: DatasetDict,
+    examples: dict,
     compress: bool,
     tokenizer: PreTrainedTokenizer,
     text_column_name: str,
@@ -112,36 +111,31 @@ def strategic_tokenize_function(
     cl_token: str,
     cr_token: str,
     logger: MultiProcessAdapter,
-) -> DatasetDict:
+    sc: SelectiveContext,
+) -> dict:
     if not compress:
-        return tokenizer(examples[text_column_name])
+        # Tokenize and return the column as is
+        return {text_column_name: tokenizer(examples[text_column_name])}
 
-    # initialize model to get self information
-    sc = SelectiveContext(model_type="gpt2", lang="en")
+    # Prepare the modified column
+    modified_texts = []
 
-    def process_example(example):
-        cur_text = example[text_column_name]
-
-        # ignore examples < 30 words
+    for cur_text in examples[text_column_name]:
+        # Ignore examples < 30 words
         words = cur_text.split()
         if len(words) < 30:
-            return {text_column_name: cur_text}  # Return original text if too short
+            tokenized_text = cur_text  # Keep the original text if too short
+        else:
+            # Use selective context class to determine masked phrases
+            _, masked_phrases = sc(
+                cur_text, reduce_ratio=bound_ratio, reduce_level="phrase"
+            )
+            # Insert sentinel tokens
+            tokenized_text = insert_sentinel_tokens(
+                cur_text, masked_phrases, cl_token, cr_token
+            )
+        # Append the modified text to the list
+        modified_texts.append(tokenized_text)
 
-        # Use selective context class to determine masked phrases
-        _, masked_phrases = sc(
-            cur_text, reduce_ratio=bound_ratio, reduce_level="phrase"
-        )
-
-        # Insert sentinel tokens to cover masked phrases in spans
-        tokenized_text = insert_sentinel_tokens(
-            cur_text, masked_phrases, cl_token, cr_token
-        )
-        # print(tokenized_text)  # Debugging output
-
-        # Return the modified text
-        return {text_column_name: tokenized_text}
-
-    # use map to apply to each example
-    new_dataset = examples.map(process_example)
-
-    return tokenizer(new_dataset[text_column_name])
+    # Return only the modified column as a dictionary
+    return {text_column_name: modified_texts}
