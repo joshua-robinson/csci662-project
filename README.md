@@ -12,11 +12,5 @@ To run the code in this repository you will first need to follow these steps to 
 3. Install the following packages into the environment: `transformers==4.28.0`, `datasets==1.8.0`, `torch==1.13.1`, `accelerate==0.17.0`, `peft==0.2.0`, `tensorboardx`. Then install `huggingface_hub==0.26.2`.
 4. Run `chmod +x *.sh`.
 
-### Setup 2: Spacy compatability
-1. pip install -U spacy
-2. pip install thinc==8.3.0
-3. pip install nltk
-4. python -m spacy download en_core_web_sm
-
 ### Evaluating Claim #1
 To fill in the table cell for the "KV Compression" method with compression ratio of 0.1, run `sh run_clm_kv_compression.sh 0.1`. To fill in the table cell for the "Local Attention" method with compression ratio of 0.1, run `sh run_clm_local_attention.sh 0.1`. To fill in the table cell for the "Scattered Attention" method with compression ratio of 0.1, run `sh run_clm_scattered_attention.sh 0.1`. Filling in table cells for different compression ratios is as easy as just replacing 0.1 with a different value.
