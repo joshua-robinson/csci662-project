@@ -20,5 +20,5 @@ Table here.
 ### Evaluating Claim #2
 Text here.
 
-# Claim #2 Results
+### Claim #2 Results
 Table here.
