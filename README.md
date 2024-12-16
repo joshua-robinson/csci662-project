@@ -50,6 +50,20 @@ These tables show the perplexities from the original paper and our reproduction.
 | 0.8               | 90.35          | 91.6         |
 | 0.9               | 138.28         | 135.9        |
 
+👇For KV compression
+| Compression Ratio | Reproduced PPL | Original PPL |
+|-------------------|----------------|--------------|
+| 0.0               | 10.33          | 11.2         |
+| 0.1               | 11.55          | 11.4         |
+| 0.2               | 12.15          | 11.5         |
+| 0.3               | 12.66          | 11.8         |
+| 0.4               | 13.08          | 11.9         |
+| 0.5               | 13.46          | 12.3         |
+| 0.6               | 13.53          | 13.5         |
+| 0.7               | 13.68          | 13.7         |
+| 0.8               | 13.79          | 13.8         |
+| 0.9               | 13.87          | 14.0         |
+
 ### Evaluating Claim #2
 Text here.
 
