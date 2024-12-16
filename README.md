@@ -14,6 +14,8 @@ To run the code in this repository you will first need to follow these steps to 
 5. Install the following packages into the new environment: `peft==0.2.0`, `tensorboardx==2.6.2.2`
 6. Uninstall `transformers` and install version `4.28.0`
 
+Note there is no need to download data as it is all included in this repository. Data preprocessing is also including automatically in the training and evaluation scripts, and doesn't need to be done separately.
+
 ### Evaluating Claim #1
 Text here.
 
