@@ -20,8 +20,9 @@ Note there is no need to download data as it is all included in this repository.
 Text here.
 
 ### Claim #1 Results
-Table here.
+These tables show the perplexities from the original paper and our reproduction.
 
+👇For local attention
 | Compression Ratio | Original PPL | Reproduced PPL |
 |-------------------|--------------|----------------|
 | 0.0               | 11.2         | 10.33          |
@@ -34,6 +35,20 @@ Table here.
 | 0.7               | 14.8         | 15.00          |
 | 0.8               | 17.2         | 17.45          |
 | 0.9               | 22.9         | 24.07          |
+
+👇For scattered attention
+| Compression Ratio | Reproduced PPL | Original PPL |
+|-------------------|----------------|--------------|
+| 0.0               | 10.33          | 11.2         |
+| 0.1               | 12.80          | 13.1         |
+| 0.2               | 16.03          | 16.5         |
+| 0.3               | 20.23          | 20.7         |
+| 0.4               | 26.52          | 26.6         |
+| 0.5               | 35.11          | 34.9         |
+| 0.6               | 46.87          | 47.2         |
+| 0.7               | 64.38          | 65.7         |
+| 0.8               | 90.35          | 91.6         |
+| 0.9               | 138.28         | 135.9        |
 
 ### Evaluating Claim #2
 Text here.
