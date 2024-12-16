@@ -9,7 +9,10 @@ We seek to address a central claim of the paper [Context Compression for Auto-re
 To run the code in this repository you will first need to follow these steps to set up your environment:
 1. Create a new `conda` environment with `python==3.8`.
 2. Activate the new environment.
-3. Install the following packages into the environment: `transformers==4.28.0`, `datasets==1.8.0`, `torch==1.13.1`, `accelerate==0.17.0`, `peft==0.2.0`, `tensorboardx`. Then install `huggingface_hub==0.26.2`.
+3. Install the following packages into the new environment: `transformers==4.27.0`, `datasets==1.8.0`, `torch==1.13.1`, `accelerate==0.17.0`
+4. Uninstall `huggingface-hub` and install version `0.26.2`
+5. Install the following packages into the new environment: `peft==0.2.0`, `tensorboardx==2.6.2.2`
+6. Uninstall `transformers` and install version `4.28.0`
 
 ### Evaluating Claim #1
 Text here.
