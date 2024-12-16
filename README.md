@@ -17,7 +17,11 @@ To run the code in this repository you will first need to follow these steps to 
 Note there is no need to download data as it is all included in this repository. Data preprocessing is also including automatically in the training and evaluation scripts, and doesn't need to be done separately.
 
 ### Evaluating Claim #1
-Text here.
+To reproduce the local attention experiment with bound ratio 0.3 in the next section, run
+```
+python3 run_experiment.py -e local -b 0.3
+```
+To get results for a different bound ratio, simple change `0.3` to another value. You can experiment with scattered attention and KV compression by changing `local` to `scattered` or `kv`, respectively. WikiText-2 test perplexity for the run, along with other training data and model weights can be found in the resulting file (perplexity in particular will be at the end of the `train.log` file).
 
 ### Claim #1 Results
 These tables show the perplexities from the original paper and our reproduction.
@@ -67,5 +71,4 @@ These tables show the perplexities from the original paper and our reproduction.
 ### Evaluating Claim #2
 Text here.
 
-### Claim #2 Results
-Table here.
+Note that we don't include results for this section, since our experimental setup only loosely matches that of the authors.
