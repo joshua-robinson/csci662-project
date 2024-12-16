@@ -69,6 +69,13 @@ These tables show the perplexities from the original paper and our reproduction.
 | 0.9               | 13.87          | 14.0         |
 
 ### Evaluating Claim #2
-Text here.
+To produce generations for a particular model trained as explained above, you'll use `generation.py`. The arguments to pass in from command line to match the way we did it are
+* `-m` Name of the directory where the model you trained before is stored
+* `-t` Either `kv` or `local` depending on how the model was trained (`scattered` is not supported, as it wasn't used for generation runs in the original paper)
+* `-r` Compression ratio (e.g., `0.3`)
+* `-o` The name of the file where the generations should be saved - should be a `json` file
+* `-b 0` Include this is you want to make it so the model cannot generate `<|endoftext|>` like we did
+
+To evaluate generations with ROUGE-L, BERTScore, and Pythia 1B perplexity you'll use the `rougel.py`, `bertscore.py`, and `pythia_ppl.py` files, respectively. For each, specify your generation file using `-f`.
 
 Note that we don't include results for this section, since our experimental setup only loosely matches that of the authors.
