@@ -21,7 +21,7 @@ To reproduce the local attention experiment with bound ratio 0.3 in the next sec
 ```
 python3 run_experiment.py -e local -b 0.3
 ```
-To get results for a different bound ratio, simple change `0.3` to another value. You can experiment with scattered attention and KV compression by changing `local` to `scattered` or `kv`, respectively. WikiText-2 test perplexity for the run, along with other training data and model weights can be found in the resulting file (perplexity in particular will be at the end of the `train.log` file).
+To get results for a different bound ratio, simple change `0.3` to another value. You can experiment with scattered attention and KV compression by changing `local` to `scattered` or `kv`, respectively. WikiText-2 test perplexity for the run, along with other training data and model weights can be found in the resulting output directory (perplexity in particular will be at the end of the `train.log` file).
 
 ### Claim #1 Results
 These tables show the perplexities from the original paper and our reproduction.
