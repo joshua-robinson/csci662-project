@@ -23,18 +23,18 @@ Text here.
 These tables show the perplexities from the original paper and our reproduction.
 
 👇For local attention
-| Compression Ratio | Original PPL | Reproduced PPL |
-|-------------------|--------------|----------------|
-| 0.0               | 11.2         | 10.33          |
-| 0.1               | 11.3         | 10.99          |
-| 0.2               | 11.5         | 11.31          |
-| 0.3               | 11.8         | 11.85          |
-| 0.4               | 12.2         | 12.12          |
-| 0.5               | 12.9         | 12.83          |
-| 0.6               | 13.6         | 13.62          |
-| 0.7               | 14.8         | 15.00          |
-| 0.8               | 17.2         | 17.45          |
-| 0.9               | 22.9         | 24.07          |
+| Compression Ratio | Reproduced PPL | Original PPL |
+|-------------------|----------------|--------------|
+| 0.0               | 10.33          | 11.2         |
+| 0.1               | 10.99          | 11.3         |
+| 0.2               | 11.31          | 11.5         |
+| 0.3               | 11.85          | 11.8         |
+| 0.4               | 12.12          | 12.2         |
+| 0.5               | 12.83          | 12.9         |
+| 0.6               | 13.62          | 13.6         |
+| 0.7               | 15.00          | 14.8         |
+| 0.8               | 17.45          | 17.2         |
+| 0.9               | 24.07          | 22.9         |
 
 👇For scattered attention
 | Compression Ratio | Reproduced PPL | Original PPL |
